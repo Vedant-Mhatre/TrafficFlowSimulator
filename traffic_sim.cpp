@@ -86,6 +86,31 @@ void moveVehicles(std::vector<Vehicle> &vehicles, TrafficLight &light)
     }
 }
 
+void displayGrid(std::vector<Vehicle> &vehicles, TrafficLight &light)
+{
+    char grid[GRID_HEIGHT][GRID_WIDTH];
+    for (int i = 0; i < GRID_HEIGHT; ++i)
+        for (int j = 0; j < GRID_WIDTH; ++j)
+            grid[i][j] = ' ';
+
+    for (int i = 0; i < GRID_HEIGHT; ++i)
+        grid[i][GRID_WIDTH / 2] = '|';
+    for (int j = 0; j < GRID_WIDTH; ++j)
+        grid[GRID_HEIGHT / 2][j] = '-';
+
+    grid[GRID_HEIGHT / 2][GRID_WIDTH / 2] = light.isGreen ? 'G' : 'R';
+
+    for (const auto &v : vehicles)
+        grid[v.y][v.x] = 'V';
+
+    for (int i = 0; i < GRID_HEIGHT; ++i)
+    {
+        for (int j = 0; j < GRID_WIDTH; ++j)
+            std::cout << grid[i][j];
+        std::cout << std::endl;
+    }
+}
+
 int main()
 {
     std::vector<Vehicle> vehicles = {
