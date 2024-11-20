@@ -47,6 +47,45 @@ void updateTrafficLight(TrafficLight &light)
     }
 }
 
+void moveVehicles(std::vector<Vehicle> &vehicles, TrafficLight &light)
+{
+    for (auto &v : vehicles)
+    {
+        bool canMove = true;
+
+        if (v.x == GRID_WIDTH / 2 && v.y == GRID_HEIGHT / 2)
+        {
+            if ((v.dir == UP || v.dir == DOWN) && !light.isGreen)
+                canMove = false;
+            if ((v.dir == LEFT || v.dir == RIGHT) && light.isGreen)
+                canMove = false;
+        }
+
+        if (canMove)
+        {
+            switch (v.dir)
+            {
+            case UP:
+                if (v.y > 0)
+                    v.y--;
+                break;
+            case DOWN:
+                if (v.y < GRID_HEIGHT - 1)
+                    v.y++;
+                break;
+            case LEFT:
+                if (v.x > 0)
+                    v.x--;
+                break;
+            case RIGHT:
+                if (v.x < GRID_WIDTH - 1)
+                    v.x++;
+                break;
+            }
+        }
+    }
+}
+
 int main()
 {
     std::vector<Vehicle> vehicles = {
