@@ -6,6 +6,7 @@
 const int GRID_WIDTH = 20;
 const int GRID_HEIGHT = 10;
 const int SIMULATION_STEPS = 50;
+const int TRAFFIC_LIGHT_INTERVAL = 5;
 
 enum Direction
 {
@@ -21,6 +22,12 @@ struct Vehicle
     Direction dir;
 };
 
+struct TrafficLight
+{
+    bool isGreen;
+    int timer;
+};
+
 void clearScreen()
 {
 #ifdef _WIN32
@@ -30,46 +37,32 @@ void clearScreen()
 #endif
 }
 
-void moveVehicles(std::vector<Vehicle> &vehicles)
+void updateTrafficLight(TrafficLight &light)
 {
-    for (auto &v : vehicles)
+    light.timer++;
+    if (light.timer >= TRAFFIC_LIGHT_INTERVAL)
     {
-        switch (v.dir)
-        {
-        case UP:
-            if (v.y > 0)
-                v.y--;
-            break;
-        case DOWN:
-            if (v.y < GRID_HEIGHT - 1)
-                v.y++;
-            break;
-        case LEFT:
-            if (v.x > 0)
-                v.x--;
-            break;
-        case RIGHT:
-            if (v.x < GRID_WIDTH - 1)
-                v.x++;
-            break;
-        }
+        light.isGreen = !light.isGreen;
+        light.timer = 0;
     }
 }
 
 int main()
 {
-    // Initialize vehicles
     std::vector<Vehicle> vehicles = {
         {GRID_WIDTH / 2, GRID_HEIGHT - 1, UP},
         {0, GRID_HEIGHT / 2, RIGHT}};
+
+    TrafficLight light = {true, 0}; // Vertical green to start
 
     for (int step = 0; step < SIMULATION_STEPS; ++step)
     {
         clearScreen();
         std::cout << "Step: " << step + 1 << std::endl;
 
-        // Move vehicles
-        moveVehicles(vehicles);
+        // Update traffic light
+        updateTrafficLight(light);
+        std::cout << "Traffic Light: " << (light.isGreen ? "Green (Vertical)" : "Red (Horizontal)") << std::endl;
 
         // Display vehicle positions
         for (const auto &v : vehicles)
