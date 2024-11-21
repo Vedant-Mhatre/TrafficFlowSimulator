@@ -30,3 +30,6 @@
 *.exe
 *.out
 *.app
+traffic_sim.dSYM/
+.DS_Store
+traffic_sim
