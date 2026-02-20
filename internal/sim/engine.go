@@ -154,7 +154,7 @@ func (e *Engine) Run(captureTimeline bool, renderOverride *bool) Report {
 		}
 
 		if shouldRender {
-			RenderGrid(e.cfg, e.vehicles, e.light, step)
+			RenderGrid(e.cfg, e.vehicles, e.light, e.renderStats(step))
 			if e.cfg.Render.DelayMS > 0 {
 				time.Sleep(time.Duration(e.cfg.Render.DelayMS) * time.Millisecond)
 			}
@@ -176,6 +176,60 @@ func (e *Engine) snapshot(step int) StepSnapshot {
 		Step:       step + 1,
 		LightGreen: e.light.VerticalGreen,
 		Vehicles:   copyVehicles,
+	}
+}
+
+func (e *Engine) renderStats(step int) RenderStats {
+	completed := 0
+	for _, done := range e.dirDone {
+		completed += done
+	}
+
+	throughput := 0.0
+	if step+1 > 0 {
+		throughput = float64(completed) / float64(step+1) * 100
+	}
+	avgSpeed := 0.0
+	if e.totalVehicleStep > 0 {
+		avgSpeed = float64(e.totalDistance) / float64(e.totalVehicleStep)
+	}
+
+	laneQueue := map[Direction]int{
+		Up:    0,
+		Down:  0,
+		Left:  0,
+		Right: 0,
+	}
+	for dir, lane := range e.laneStates {
+		laneQueue[dir] = lane.Queued
+	}
+
+	laneActive := map[Direction]int{
+		Up:    0,
+		Down:  0,
+		Left:  0,
+		Right: 0,
+	}
+	for _, v := range e.vehicles {
+		laneActive[v.Direction]++
+	}
+
+	return RenderStats{
+		ScenarioName:         e.cfg.Name,
+		Step:                 step + 1,
+		TotalSteps:           e.cfg.Steps,
+		VerticalGreen:        e.light.VerticalGreen,
+		SpawnedVehicles:      len(e.vehicles) + completed,
+		CompletedVehicles:    completed,
+		ActiveVehicles:       len(e.vehicles),
+		BlockedBySignal:      e.blockedSignal,
+		BlockedByTraffic:     e.blockedTraffic,
+		PotentialCollisions:  e.potentialCrash,
+		MaxQueueOverall:      e.maxQueueOverall,
+		AverageNetworkSpeed:  avgSpeed,
+		ThroughputPer100Step: throughput,
+		LaneQueue:            laneQueue,
+		LaneActive:           laneActive,
 	}
 }
 

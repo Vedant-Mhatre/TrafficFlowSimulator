@@ -31,7 +31,7 @@ go run ./cmd/trafficsim -benchmark configs/benchmark/intersection-regression.jso
 # compare two configs quickly
 go run ./cmd/trafficsim -compare configs/baseline.json,configs/improved.json
 
-# interactive terminal render (ASCII grid)
+# interactive terminal dashboard
 go run ./cmd/trafficsim -config configs/baseline.json
 ```
 
@@ -86,9 +86,14 @@ Overall: PASS
 
 ## Visualization
 
-- Terminal visualization already exists via `-config ...` without `-no-render`.
-- It is currently ASCII-grid based and intentionally simple.
-- Richer visualization (ncurses or web replay) should be a separate PR to keep benchmark logic changes isolated.
+- Terminal visualization runs via `-config ...` without `-no-render`.
+- The renderer now shows a live dashboard with:
+  - current signal phase,
+  - spawned/completed/active vehicles,
+  - blockers and conflict counters,
+  - throughput and average speed,
+  - per-lane queue and active vehicle counts.
+- The map panel is color-coded (`G/R`, lane arrows, roads) and bordered for readability.
 
 ## Benchmark Spec Reference
 
@@ -140,4 +145,5 @@ TTC note:
 
 ## Demo
 
-![Traffic Simulation Demo](./simulation.gif)
+Terminal visualization is now the primary demo surface.  
+A new GIF recording can be added after final visual tuning.
