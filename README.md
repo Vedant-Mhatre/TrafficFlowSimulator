@@ -138,10 +138,6 @@ TTC note:
 - Discrete grid movement, not continuous vehicle dynamics.
 - Conflict/TTC are proxy metrics.
 
-## Legacy C++ Prototype
-
-The original prototype is preserved in `traffic_sim.cpp`.
-
 ## Demo
 
 ![Traffic Simulation Demo](./simulation.gif)
