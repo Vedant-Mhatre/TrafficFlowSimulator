@@ -1,0 +1,35 @@
+{
+  "name": "intersection-rush-hour-baseline",
+  "steps": 120,
+  "grid": {
+    "width": 20,
+    "height": 10
+  },
+  "signal": {
+    "vertical_green_steps": 8,
+    "horizontal_green_steps": 4
+  },
+  "spawn": {
+    "lanes": {
+      "up": {
+        "entry_x": 10,
+        "entry_y": 9,
+        "step_interval": 0,
+        "profile_csv": "../rush-hour.csv",
+        "profile_column": "up"
+      },
+      "right": {
+        "entry_x": 0,
+        "entry_y": 5,
+        "step_interval": 0,
+        "profile_csv": "../rush-hour.csv",
+        "profile_column": "right"
+      }
+    }
+  },
+  "render": {
+    "enabled": false,
+    "delay_ms": 0
+  },
+  "report_path": "../../reports/benchmark-intersection-baseline-report.json"
+}

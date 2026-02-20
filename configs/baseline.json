@@ -1,0 +1,33 @@
+{
+  "name": "baseline-fixed-time",
+  "steps": 180,
+  "grid": {
+    "width": 20,
+    "height": 10
+  },
+  "signal": {
+    "vertical_green_steps": 5,
+    "horizontal_green_steps": 5
+  },
+  "spawn": {
+    "lanes": {
+      "up": {
+        "entry_x": 10,
+        "entry_y": 9,
+        "step_interval": 3,
+        "max_vehicles": 0
+      },
+      "right": {
+        "entry_x": 0,
+        "entry_y": 5,
+        "step_interval": 4,
+        "max_vehicles": 0
+      }
+    }
+  },
+  "render": {
+    "enabled": true,
+    "delay_ms": 80
+  },
+  "report_path": "../reports/baseline-report.json"
+}

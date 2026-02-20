@@ -1,0 +1,13 @@
+{
+  "name": "intersection-rush-hour-regression",
+  "baseline_config": "intersection-baseline.json",
+  "candidate_config": "intersection-candidate.json",
+  "thresholds": {
+    "max_collision_increase": 0,
+    "max_delay_increase": 0.2,
+    "min_throughput_ratio": 0.95,
+    "max_jerk_increase": 0.15,
+    "max_min_ttc_drop": 0.5
+  },
+  "report_path": "../../reports/benchmark-intersection-scorecard.json"
+}
