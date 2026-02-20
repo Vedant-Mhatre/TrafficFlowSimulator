@@ -8,16 +8,28 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Vedant-Mhatre/TrafficFlowSimulator/internal/benchmark"
 	"github.com/Vedant-Mhatre/TrafficFlowSimulator/internal/sim"
 )
 
 func main() {
 	configPath := flag.String("config", "configs/baseline.json", "Path to a simulation config JSON")
 	compare := flag.String("compare", "", "Comma-separated config paths to run and compare")
+	benchmarkPath := flag.String("benchmark", "", "Path to deterministic benchmark spec JSON")
 	noRender := flag.Bool("no-render", false, "Disable terminal rendering")
 	captureTimeline := flag.Bool("timeline", false, "Include per-step timeline in report JSON")
 	out := flag.String("out", "", "Optional report output path override for single config mode")
 	flag.Parse()
+
+	if *benchmarkPath != "" && *compare != "" {
+		exitErr(errors.New("benchmark mode cannot be used with compare mode"))
+	}
+	if *benchmarkPath != "" {
+		if err := runBenchmark(*benchmarkPath); err != nil {
+			exitErr(err)
+		}
+		return
+	}
 
 	if *compare != "" {
 		paths := splitAndTrim(*compare)
@@ -60,6 +72,27 @@ func main() {
 	}
 }
 
+func runBenchmark(path string) error {
+	spec, err := benchmark.LoadSpec(path)
+	if err != nil {
+		return err
+	}
+
+	result, err := benchmark.Run(spec)
+	if err != nil {
+		return err
+	}
+	printBenchmark(result)
+
+	if spec.ReportPath != "" {
+		fmt.Printf("\nBenchmark report written to %s\n", spec.ReportPath)
+	}
+	if !result.Passed {
+		return errors.New("benchmark failed regression checks")
+	}
+	return nil
+}
+
 func runCompare(paths []string) error {
 	reports := make([]sim.Report, 0, len(paths))
 	for _, path := range paths {
@@ -82,6 +115,47 @@ func runCompare(paths []string) error {
 	}
 	printComparison(reports)
 	return nil
+}
+
+func printBenchmark(result benchmark.Result) {
+	fmt.Printf("Benchmark: %s\n", result.Name)
+	fmt.Println("Scorecard:")
+	fmt.Println("Case | Completed | Throughput/100 | Avg Delay | Collisions | Min TTC | Mean Abs Jerk | Hard Brakes")
+	fmt.Printf("baseline(%s) | %d | %.2f | %.2f | %d | %.2f | %.3f | %d\n",
+		result.Baseline.ScenarioName,
+		result.Baseline.VehiclesCompleted,
+		result.Baseline.ThroughputPer100,
+		result.Baseline.AverageDelay,
+		result.Baseline.PotentialCollisions,
+		result.Baseline.MinTTCSteps,
+		result.Baseline.MeanAbsJerk,
+		result.Baseline.HardBrakes,
+	)
+	fmt.Printf("candidate(%s) | %d | %.2f | %.2f | %d | %.2f | %.3f | %d\n",
+		result.Candidate.ScenarioName,
+		result.Candidate.VehiclesCompleted,
+		result.Candidate.ThroughputPer100,
+		result.Candidate.AverageDelay,
+		result.Candidate.PotentialCollisions,
+		result.Candidate.MinTTCSteps,
+		result.Candidate.MeanAbsJerk,
+		result.Candidate.HardBrakes,
+	)
+
+	fmt.Println("\nChecks:")
+	for _, check := range result.Checks {
+		status := "PASS"
+		if !check.Passed {
+			status = "FAIL"
+		}
+		fmt.Printf("- %s: %s (baseline=%.3f candidate=%.3f) -> %s\n",
+			check.Name, check.Rule, check.Baseline, check.Candidate, status)
+	}
+	final := "PASS"
+	if !result.Passed {
+		final = "FAIL"
+	}
+	fmt.Printf("\nOverall: %s\n", final)
 }
 
 func printReport(report sim.Report) {

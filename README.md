@@ -29,6 +29,12 @@ The original C++ prototype is still available in `traffic_sim.cpp`.
   - Queue lengths (per lane and global max).
   - Blocking by signal vs blocking by traffic.
   - Potential collision/conflict count.
+- Deterministic benchmark mode with regression gates for:
+  - Throughput.
+  - Average delay.
+  - Potential collisions.
+  - Minimum TTC (time-to-collision proxy).
+  - Mean absolute jerk and hard-brake count.
 - Compare mode to evaluate multiple configs in one command.
 - JSON report output for downstream analysis.
 
@@ -39,10 +45,12 @@ The original C++ prototype is still available in `traffic_sim.cpp`.
 - `internal/sim/engine.go`: simulation engine and metrics.
 - `internal/sim/render.go`: terminal visualization.
 - `internal/sim/report.go`: JSON report writer.
+- `internal/benchmark/benchmark.go`: deterministic baseline-vs-candidate benchmark runner.
 - `configs/baseline.json`: baseline scenario.
 - `configs/improved.json`: tuned signal-timing scenario.
 - `configs/rush-hour.json`: profile-based demand scenario.
 - `configs/rush-hour.csv`: sample CSV demand profile.
+- `configs/benchmark/intersection-regression.json`: benchmark spec with thresholds.
 
 ## Prerequisites
 
@@ -74,6 +82,12 @@ Compare multiple scenarios:
 go run ./cmd/trafficsim -compare configs/baseline.json,configs/improved.json
 ```
 
+Run deterministic benchmark (fails with non-zero exit code on regression):
+
+```bash
+go run ./cmd/trafficsim -benchmark configs/benchmark/intersection-regression.json
+```
+
 Run the CSV profile scenario:
 
 ```bash
@@ -92,6 +106,7 @@ Use Make targets (optional):
 ```bash
 make test
 make compare
+make benchmark
 make rush
 ```
 
@@ -119,6 +134,26 @@ Lane validation rules:
 
 - `up`/`down` lanes must use center vertical road (`entry_x == grid.width/2`).
 - `left`/`right` lanes must use center horizontal road (`entry_y == grid.height/2`).
+
+## Benchmark Spec Reference
+
+`-benchmark` expects a JSON spec that runs one deterministic baseline and one deterministic candidate scenario, then applies regression checks.
+
+Spec fields:
+
+- `name`: benchmark name.
+- `baseline_config`: path to baseline simulation config.
+- `candidate_config`: path to candidate simulation config.
+- `thresholds.max_collision_increase`: allowed increase in potential collisions.
+- `thresholds.max_delay_increase`: allowed increase in average delay.
+- `thresholds.min_throughput_ratio`: required candidate throughput / baseline throughput ratio.
+- `thresholds.max_jerk_increase`: allowed increase in mean absolute jerk.
+- `thresholds.max_min_ttc_drop`: allowed drop in minimum TTC proxy.
+- `report_path`: optional benchmark scorecard output path.
+
+TTC note:
+- In this discrete grid model, TTC is a proxy metric.
+- When no actively closing leader/follower pair exists in a step, benchmark falls back to minimum lane headway proxy for that step.
 
 ## CSV Demand Profile Format
 
