@@ -1,107 +1,41 @@
 # TrafficFlowSimulator
 
-`TrafficFlowSimulator` is a Go-based traffic simulation CLI for experimenting with intersection control, demand patterns, and performance metrics.
+Go-based simulation and benchmarking tool for intersection traffic behavior.
 
-The original C++ prototype is still available in `traffic_sim.cpp`.
+## Start Here
 
-## Demo
+Problem:
+- simulation logic changes are easy to make but hard to evaluate reliably.
+- ad-hoc runs do not clearly tell you if a change improved behavior or caused regressions.
 
-![Traffic Simulation Demo](./simulation.gif)
+Solution in this repo:
+- run deterministic baseline vs candidate scenarios.
+- compute a consistent scorecard (throughput, delay, collisions, TTC proxy, jerk, hard brakes).
+- fail fast on regression thresholds with a non-zero exit code.
 
-## Why This Is Useful
-
-- Signal timing experiments: compare baseline vs tuned timing plans quickly.
-- Quantifiable outcomes: throughput, waiting, congestion, and conflict indicators.
-- Interview readiness: clear simulator architecture plus reproducible scenario runs.
-- Extendable base: can be evolved toward richer AV/traffic simulation components.
-
-## Features
-
-- Single-intersection grid simulation (`20x10` default, configurable).
-- Multi-direction traffic demand (`up`, `down`, `left`, `right`).
-- Fixed-time traffic lights with independent vertical/horizontal green windows.
-- Arrival models:
-  - Periodic arrivals with `step_interval`.
-  - Optional CSV demand profiles (`step`, per-lane count column).
-- Metrics and reporting:
-  - Vehicles spawned/completed, throughput per 100 steps.
-  - Average wait time and average trip duration.
-  - Queue lengths (per lane and global max).
-  - Blocking by signal vs blocking by traffic.
-  - Potential collision/conflict count.
-- Deterministic benchmark mode with regression gates for:
-  - Throughput.
-  - Average delay.
-  - Potential collisions.
-  - Minimum TTC (time-to-collision proxy).
-  - Mean absolute jerk and hard-brake count.
-- Compare mode to evaluate multiple configs in one command.
-- JSON report output for downstream analysis.
-
-## Project Layout
-
-- `cmd/trafficsim/main.go`: CLI entrypoint.
-- `internal/sim/config.go`: config schema and validation.
-- `internal/sim/engine.go`: simulation engine and metrics.
-- `internal/sim/render.go`: terminal visualization.
-- `internal/sim/report.go`: JSON report writer.
-- `internal/benchmark/benchmark.go`: deterministic baseline-vs-candidate benchmark runner.
-- `configs/baseline.json`: baseline scenario.
-- `configs/improved.json`: tuned signal-timing scenario.
-- `configs/rush-hour.json`: profile-based demand scenario.
-- `configs/rush-hour.csv`: sample CSV demand profile.
-- `configs/benchmark/intersection-regression.json`: benchmark spec with thresholds.
-
-## Prerequisites
-
-- Go `1.22+`
-
-## Quick Start
-
-Run baseline scenario with terminal visualization:
-
-```bash
-go run ./cmd/trafficsim -config configs/baseline.json
-```
-
-Run without visualization (faster for analysis):
-
-```bash
-go run ./cmd/trafficsim -config configs/baseline.json -no-render
-```
-
-Run and include timeline snapshots in report:
-
-```bash
-go run ./cmd/trafficsim -config configs/baseline.json -no-render -timeline
-```
-
-Compare multiple scenarios:
-
-```bash
-go run ./cmd/trafficsim -compare configs/baseline.json,configs/improved.json
-```
-
-Run deterministic benchmark (fails with non-zero exit code on regression):
+If you only run one command, run this:
 
 ```bash
 go run ./cmd/trafficsim -benchmark configs/benchmark/intersection-regression.json
 ```
 
-Run the CSV profile scenario:
+## Quick Commands
 
 ```bash
-go run ./cmd/trafficsim -config configs/rush-hour.json -no-render
+# run tests
+go test ./...
+
+# run deterministic regression benchmark
+go run ./cmd/trafficsim -benchmark configs/benchmark/intersection-regression.json
+
+# compare two configs quickly
+go run ./cmd/trafficsim -compare configs/baseline.json,configs/improved.json
+
+# interactive terminal render (ASCII grid)
+go run ./cmd/trafficsim -config configs/baseline.json
 ```
 
-Build a local binary:
-
-```bash
-go build -o trafficsim ./cmd/trafficsim
-./trafficsim -config configs/baseline.json -no-render
-```
-
-Use Make targets (optional):
+Make shortcuts:
 
 ```bash
 make test
@@ -110,126 +44,104 @@ make benchmark
 make rush
 ```
 
-## Config Reference
+## CLI Modes
 
-Top-level fields:
+- `-config <file>`: run one scenario and print metrics.
+- `-compare a.json,b.json`: run multiple scenarios and print side-by-side summary.
+- `-benchmark <spec.json>`: run deterministic baseline vs candidate plus pass/fail checks.
 
-- `name`: scenario name used in CLI/report output.
-- `steps`: total simulation steps.
-- `grid.width`, `grid.height`: grid dimensions.
-- `signal.vertical_green_steps`, `signal.horizontal_green_steps`: fixed-time signal plan.
-- `spawn.lanes`: map keyed by lane direction (`up`, `down`, `left`, `right`).
-- `render.enabled`, `render.delay_ms`: terminal rendering controls.
-- `report_path`: JSON report path. Relative paths are resolved relative to the config file directory.
+## What The Benchmark Reports
 
-Lane fields:
+- `throughput_per_100_steps`
+- `average_delay_steps`
+- `potential_collisions`
+- `min_ttc_steps` (discrete proxy)
+- `mean_abs_jerk`
+- `hard_brakes`
 
-- `entry_x`, `entry_y`: spawn coordinates for the lane.
-- `step_interval`: spawn every N steps (`0` disables periodic spawning).
-- `max_vehicles`: optional cap for total spawned vehicles (`0` means unlimited).
-- `profile_csv`: optional CSV demand profile file.
-- `profile_column`: CSV column to read counts from (defaults to lane name).
+Checks are configured in `thresholds`. If any check fails, command exits non-zero.
 
-Lane validation rules:
+## Example Benchmark Output
 
-- `up`/`down` lanes must use center vertical road (`entry_x == grid.width/2`).
-- `left`/`right` lanes must use center horizontal road (`entry_y == grid.height/2`).
+```text
+Benchmark: intersection-rush-hour-regression
+Case | Completed | Throughput/100 | Avg Delay | Collisions | Min TTC | Mean Abs Jerk | Hard Brakes
+baseline(...) | 61 | 50.83 | 7.61 | 0 | 1.00 | 0.264 | 50
+candidate(...) | 61 | 50.83 | 6.10 | 0 | 1.00 | 0.264 | 44
+Overall: PASS
+```
+
+## Project Layout
+
+- `cmd/trafficsim/main.go`: CLI.
+- `internal/sim/*`: simulation engine, config, rendering, reports.
+- `internal/benchmark/*`: deterministic benchmark runner and checks.
+- `configs/baseline.json`: baseline scenario.
+- `configs/improved.json`: alternate scenario.
+- `configs/rush-hour.json`: profile-based demand scenario.
+- `configs/rush-hour.csv`: demand profile.
+- `configs/benchmark/intersection-regression.json`: benchmark spec.
+- `configs/benchmark/intersection-baseline.json`: baseline benchmark scenario.
+- `configs/benchmark/intersection-candidate.json`: candidate benchmark scenario.
+
+## Visualization
+
+- Terminal visualization already exists via `-config ...` without `-no-render`.
+- It is currently ASCII-grid based and intentionally simple.
+- Richer visualization (ncurses or web replay) should be a separate PR to keep benchmark logic changes isolated.
 
 ## Benchmark Spec Reference
 
-`-benchmark` expects a JSON spec that runs one deterministic baseline and one deterministic candidate scenario, then applies regression checks.
-
-Spec fields:
-
-- `name`: benchmark name.
-- `baseline_config`: path to baseline simulation config.
-- `candidate_config`: path to candidate simulation config.
-- `thresholds.max_collision_increase`: allowed increase in potential collisions.
-- `thresholds.max_delay_increase`: allowed increase in average delay.
-- `thresholds.min_throughput_ratio`: required candidate throughput / baseline throughput ratio.
-- `thresholds.max_jerk_increase`: allowed increase in mean absolute jerk.
-- `thresholds.max_min_ttc_drop`: allowed drop in minimum TTC proxy.
-- `report_path`: optional benchmark scorecard output path.
-
-TTC note:
-- In this discrete grid model, TTC is a proxy metric.
-- When no actively closing leader/follower pair exists in a step, benchmark falls back to minimum lane headway proxy for that step.
-
-## CSV Demand Profile Format
-
-Required:
-
-- `step` column.
-- A numeric lane column (for example `up`, `right`, or custom name referenced by `profile_column`).
-
-Example:
-
-```csv
-step,up,right
-1,2,0
-2,3,1
-3,5,2
-```
-
-## Example Output
-
-```text
-Scenario: baseline-fixed-time
-Spawned: 98 | Completed: 83 | Active: 15
-Avg speed: 0.532 | Avg wait: 10.61 | Avg trip: 24.47
-Throughput/100 steps: 46.11 | Max queue: 5 | Potential collisions: 0
-Blocked by signal: 154 | Blocked by traffic: 915
-```
-
-## Testing And Verification
-
-Run unit tests:
-
-```bash
-go test ./...
-```
-
-Run additional static checks:
-
-```bash
-go vet ./...
-```
-
-## Known Limits
-
-- Roads are represented as a single cross intersection (not a full road network graph).
-- Vehicle motion is discrete grid-step movement (not continuous dynamics).
-- Conflict counting is a simple indicator, not a full collision-physics model.
-
-## Legacy C++ Prototype
-
-If you want the original version:
-
-```bash
-g++ -std=c++11 -o traffic_sim traffic_sim.cpp
-./traffic_sim
-```
-
-## Minimal Config Example
+Minimal benchmark spec:
 
 ```json
 {
-  "name": "baseline-fixed-time",
-  "steps": 180,
-  "grid": { "width": 20, "height": 10 },
-  "signal": { "vertical_green_steps": 5, "horizontal_green_steps": 5 },
-  "spawn": {
-    "lanes": {
-      "up": { "entry_x": 10, "entry_y": 9, "step_interval": 3, "max_vehicles": 0 },
-      "right": { "entry_x": 0, "entry_y": 5, "step_interval": 4, "max_vehicles": 0 }
-    }
+  "name": "intersection-rush-hour-regression",
+  "baseline_config": "intersection-baseline.json",
+  "candidate_config": "intersection-candidate.json",
+  "thresholds": {
+    "max_collision_increase": 0,
+    "max_delay_increase": 0.2,
+    "min_throughput_ratio": 0.95,
+    "max_jerk_increase": 0.15,
+    "max_min_ttc_drop": 0.5
   },
-  "render": { "enabled": false, "delay_ms": 0 },
-  "report_path": "reports/baseline-report.json"
+  "report_path": "../../reports/benchmark-intersection-scorecard.json"
 }
 ```
 
-Notes:
-- `max_vehicles: 0` means no hard cap.
-- `step_interval: 0` disables periodic spawning for that lane.
-- CSV demand profiles are supported per lane with `profile_csv` and `profile_column`.
+Field summary:
+
+- `baseline_config`, `candidate_config`: scenario config paths.
+- `max_collision_increase`: allowed collision increase vs baseline.
+- `max_delay_increase`: allowed average delay increase.
+- `min_throughput_ratio`: required candidate/baseline throughput ratio.
+- `max_jerk_increase`: allowed jerk increase.
+- `max_min_ttc_drop`: allowed TTC proxy drop.
+- `report_path`: optional JSON output path.
+
+TTC note:
+- TTC is a discrete proxy in this grid model, not continuous physics TTC.
+
+## Scenario Config Notes
+
+- Lanes: `up`, `down`, `left`, `right`.
+- `step_interval: 0` disables periodic spawning.
+- `max_vehicles: 0` means uncapped.
+- `report_path` and `profile_csv` relative paths are resolved from config file directory.
+- `up`/`down` must spawn on center vertical road.
+- `left`/`right` must spawn on center horizontal road.
+
+## Limits
+
+- Single-intersection road topology.
+- Discrete grid movement, not continuous vehicle dynamics.
+- Conflict/TTC are proxy metrics.
+
+## Legacy C++ Prototype
+
+The original prototype is preserved in `traffic_sim.cpp`.
+
+## Demo
+
+![Traffic Simulation Demo](./simulation.gif)
